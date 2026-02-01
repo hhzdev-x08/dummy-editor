@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QMouseEvent>
+#include <QEvent>
 
 class ProjectSidebar : public QWidget {
     Q_OBJECT
@@ -20,6 +21,10 @@ public:
 signals:
     // Signal to tell MainWindow: "Hey, the user wants to open this file!"
     void fileClicked(const QString &filePath);
+
+protected:
+    // More robust way to handle mouse events on the tree view
+    bool eventFilter(QObject *object, QEvent *event) override;
 
 private slots:
     void onDoubleClicked(const QModelIndex &index);
@@ -32,9 +37,6 @@ private slots:
     void renameItem();
 
 private:
-    // Helper to handle the "Empty Space Click" issue
-    void mousePressEvent(QMouseEvent *event) override;
-
     QFileSystemModel *m_model;
     QTreeView *m_treeView;
 };

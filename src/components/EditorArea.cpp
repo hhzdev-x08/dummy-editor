@@ -145,7 +145,7 @@ void EditorArea::setupEditor(CodeEditor *editor, const QString &filePath) {
 
 void EditorArea::loadTheme() {
     // Note: Assuming dracula.json is in the build directory
-    std::string themePath = "../../dracula.json";
+    std::string themePath = "dracula.json";
     QFile file(themePath.c_str());
     if (file.open(QIODevice::ReadOnly)) {
         QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
