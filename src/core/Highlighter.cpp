@@ -45,6 +45,12 @@ Highlighter::Highlighter(QTextDocument *parent, const QHash<QString, QColor> &th
     rule.pattern = QRegularExpression("\".*\""); 
     rule.format = stringFmt;
     rules.append(rule);
+
+    // Comments (using "comment" color)
+    QTextCharFormat commentFmt = createFormat("comment");
+    rule.pattern = QRegularExpression("//[^\n]*");
+    rule.format = commentFmt;
+    rules.append(rule);
 }
 
 void Highlighter::highlightBlock(const QString &text) {
