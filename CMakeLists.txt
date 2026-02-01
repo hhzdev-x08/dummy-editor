@@ -28,10 +28,18 @@ add_executable(${PROJECT_NAME}
     src/components/CodeEditor.h
     src/components/CodeEditor.cpp
     src/components/WelcomeWidget.h
+    
     src/components/ProjectSidebar.h   
     src/components/ProjectSidebar.cpp 
+
     src/components/EditorArea.h   
     src/components/EditorArea.cpp 
+
+    src/components/RichTextEditor.h
+    src/components/RichTextEditor.cpp
+
+    src/components/PasteAwareEditor.h
+    src/components/PasteAwareEditor.cpp
 
     # Core
     src/core/Highlighter.h

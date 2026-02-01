@@ -18,6 +18,7 @@
 #include "WelcomeWidget.h"
 #include "CodeEditor.h"
 #include "Highlighter.h"
+#include "RichTextEditor.h"
 
 
 class EditorArea : public QWidget {

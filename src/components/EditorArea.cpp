@@ -9,11 +9,11 @@ EditorArea::EditorArea(QWidget *parent) : QWidget(parent) {
     // A stacked widget allows switching between multiple views, like a card deck.
     m_stack = new QStackedWidget(this);
     
-    // View 1: A welcome screen, shown when no files are open.
+    // A welcome screen, shown when no files are open.
     m_welcome = new WelcomeWidget(this);
     m_stack->addWidget(m_welcome);
 
-    // View 2: A tab widget to hold one or more code editors.
+    // A tab widget to hold one or more code editors.
     m_tabs = new QTabWidget(this);
     m_tabs->setTabsClosable(true); // Add a close button ('x') to each tab.
     m_tabs->setMovable(true);      // Allow tabs to be reordered via drag-and-drop.
@@ -44,39 +44,65 @@ void EditorArea::openFile(const QString &filePath) {
     }
 
     // If not open, create a new editor widget.
-    CodeEditor *editor = new CodeEditor(this);
+    QWidget *editorWidget = nullptr;
+    QTextDocument *doc = nullptr;
+
+    // --- BRANCHING LOGIC ---
+    bool isRichText = filePath.endsWith(".html") || filePath.endsWith(".myformat");
     
     // Load the file content from disk.
     QFile file(filePath);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-        QString content = in.readAll();
-        
-        // Handle different file types; some might be rich text (HTML).
-        if (filePath.endsWith(".html") || filePath.endsWith(".myformat")) {
-            editor->setHtml(content);
-        } else {
-            editor->setPlainText(content);
-        }
-        file.close();
-    } else {
-        // Handle error if the file can't be opened.
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::warning(this, "Error", "Could not open file.");
-        delete editor; // Clean up the created editor.
         return;
     }
 
-    // Apply theming and set up syntax highlighting.
-    setupEditor(editor, filePath);
+    QTextStream in(&file);
+    QString content = in.readAll();
+    file.close();
+
+    if (isRichText) {
+        RichTextEditor *rich = new RichTextEditor(this);
+        
+        // --- Metadata Handling for .myformat ---
+        int pageSizeIndex = 1; // Default to Medium
+        QString htmlContent = content;
+
+        // Check for and parse the pageSize metadata comment.
+        if (content.startsWith("<!-- pageSize:")) {
+            QString firstLine = content.section('\n', 0, 0); // Read the first line
+            QRegularExpression re("<!-- pageSize: (\\d+) -->");
+            QRegularExpressionMatch match = re.match(firstLine);
+            if (match.hasMatch()) {
+                pageSizeIndex = match.captured(1).toInt();
+                // The actual HTML content is everything after the first line.
+                htmlContent = content.section('\n', 1);
+            }
+        }
+        
+        rich->setInitialPageSize(pageSizeIndex);
+        rich->setHtml(htmlContent);
+        rich->setTheme(m_themeColors);
+        doc = rich->document();
+        editorWidget = rich;
+
+    } else {
+        // Option B: Code
+        CodeEditor *code = new CodeEditor(this);
+        code->setPlainText(content);
+        setupEditor(code, filePath); // Apply Dracula theme
+        doc = code->document();
+        editorWidget = code;
+    }
 
     // Add the newly created editor to a new tab.
-    int index = m_tabs->addTab(editor, fileName);
+    int index = m_tabs->addTab(editorWidget, fileName);
     m_tabs->setTabToolTip(index, filePath); // Store the full path for later reference.
     m_tabs->setCurrentIndex(index);         // Make the new tab active.
     
     // Connect a signal to detect when the user modifies the text.
     // This is used to show a "*" indicator for unsaved changes.
-    connect(editor->document(), &QTextDocument::contentsChanged, this, &EditorArea::onTextModified);
+    connect(doc, &QTextDocument::contentsChanged, this, &EditorArea::onTextModified);
 
     // If this is the first file, switch the view from the welcome screen to the tabs.
     m_stack->setCurrentWidget(m_tabs);
@@ -88,30 +114,36 @@ void EditorArea::saveCurrentFile() {
     QWidget *current = m_tabs->currentWidget();
     if (!current) return; // No tab is open.
 
-    // Cast the widget to our CodeEditor class and get its associated file path.
-    CodeEditor *editor = qobject_cast<CodeEditor*>(current);
     QString filePath = m_tabs->tabToolTip(m_tabs->currentIndex());
 
     // Write the editor's content back to the file.
     QFile file(filePath);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&file);
-        
-        // Ensure we save in the correct format (HTML or plain text).
-        if (filePath.endsWith(".html") || filePath.endsWith(".myformat")) {
-            out << editor->toHtml();
-        } else {
-            out << editor->toPlainText();
-        }
-        file.close();
-        
-        // Remove the "*" from the tab title to indicate that the file is saved.
-        QString title = m_tabs->tabText(m_tabs->currentIndex());
-        if (title.endsWith("*")) {
-            m_tabs->setTabText(m_tabs->currentIndex(), title.chopped(1));
-        }
-    } else {
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::warning(this, "Error", "Could not save file.");
+        return;
+    }
+    
+    QTextStream out(&file);
+    
+    // --- POLYMORPHIC SAVE ---
+    if (auto *rich = qobject_cast<RichTextEditor*>(current)) {
+        // For our custom format, prepend the page size metadata.
+        if (filePath.endsWith(".myformat")) {
+            int sizeIndex = rich->currentPageSizeIndex();
+            out << "<!-- pageSize: " << sizeIndex << " -->\n";
+        }
+        out << rich->toHtml();
+
+    } else if (auto *code = qobject_cast<CodeEditor*>(current)) {
+        out << code->toPlainText();
+    }
+
+    file.close();
+    
+    // Remove the "*" from the tab title to indicate that the file is saved.
+    QString title = m_tabs->tabText(m_tabs->currentIndex());
+    if (title.endsWith("*")) {
+        m_tabs->setTabText(m_tabs->currentIndex(), title.chopped(1));
     }
 }
 
