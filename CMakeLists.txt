@@ -17,18 +17,32 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# 5. Define the Executable
-# Tell CMake to compile main.cpp into an app named "MyQtEditor"
-# WIN32: Hides the console window on Windows (optional, keep it off for debug usually)
+
+# Define the Executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/MainWindow.h   
     src/MainWindow.cpp 
-    src/Highlighter.h
-    src/Highlighter.cpp
-    src/CodeEditor.h
-    src/CodeEditor.cpp
-    src/WelcomeWidget.h
+
+    # Components
+    src/components/CodeEditor.h
+    src/components/CodeEditor.cpp
+    src/components/WelcomeWidget.h
+    src/components/ProjectSidebar.h   
+    src/components/ProjectSidebar.cpp 
+    src/components/EditorArea.h   
+    src/components/EditorArea.cpp 
+
+    # Core
+    src/core/Highlighter.h
+    src/core/Highlighter.cpp
+    
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/components
+    ${CMAKE_SOURCE_DIR}/src/core
 )
 
 # 6. Link the Libraries
