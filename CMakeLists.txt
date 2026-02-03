@@ -47,6 +47,12 @@ add_executable(${PROJECT_NAME}
     src/components/ImageCropDialog.h
     src/components/ImageCropDialog.cpp
 
+    src/components/CommonTooltip.h
+    src/components/CommonTooltip.cpp
+
+    src/components/DiffViewDialog.h
+    src/components/DiffViewDialog.cpp
+
     # Core
     src/core/Highlighter.h
     src/core/Highlighter.cpp

@@ -173,9 +173,8 @@ void EditorArea::onTextModified() {
 // Applies theme colors and sets up syntax highlighting for a new editor.
 void EditorArea::setupEditor(CodeEditor *editor, const QString &filePath) {
     // Apply base theme colors (background and foreground) using a stylesheet.
-    QString bg = m_themeColors.value("background").name();
-    QString fg = m_themeColors.value("foreground").name();
-    editor->setStyleSheet(QString("background-color: %1; color: %2;").arg(bg, fg));
+    // Use the proper setter which handles the Editor AND the Tooltip
+    editor->setTheme(m_themeColors);
 
     // Set up syntax highlighter, but only for plain text code files.
     bool isRichText = filePath.endsWith(".html") || filePath.endsWith(".myformat");
