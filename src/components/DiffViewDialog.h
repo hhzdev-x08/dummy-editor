@@ -30,11 +30,13 @@ public:
     DiffAction selectedAction() const { return m_action; }
 
 private slots:
-    void syncScroll(int value);
+    // void syncScroll(int value);
 
 private:
     void setupUI();
     void computeDiff(); // The logic to highlight differences
+
+    void insertStyledLine(QTextCursor &cursor, const QString &text, const QColor &bg);
 
     QString m_originalText;
     QString m_incomingText;
@@ -43,3 +45,4 @@ private:
     QTextEdit *m_leftEdit;  // Original (Selection)
     QTextEdit *m_rightEdit; // Incoming (Clipboard)
 };
+

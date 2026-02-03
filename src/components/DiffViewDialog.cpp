@@ -52,10 +52,17 @@ void DiffViewDialog::setupUI() {
     mainLayout->addWidget(splitter);
 
     // Connect scrollbars for synced scrolling
+    // setValue() automatically ignores updates if the value is the same, 
+    // effectively breaking the infinite loop without manual blockSignals().
+
     connect(m_leftEdit->verticalScrollBar(), &QScrollBar::valueChanged, 
-            this, &DiffViewDialog::syncScroll);
+            this, [this](int val){
+                m_rightEdit->verticalScrollBar()->setValue(val);
+            });
     connect(m_rightEdit->verticalScrollBar(), &QScrollBar::valueChanged, 
-            this, &DiffViewDialog::syncScroll);
+            this, [this](int val){
+                m_leftEdit->verticalScrollBar()->setValue(val);
+            });
 
     // Sync Horizontal Scrolling as well
     connect(m_leftEdit->horizontalScrollBar(), &QScrollBar::valueChanged, 
@@ -99,17 +106,6 @@ void DiffViewDialog::setupUI() {
     connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
 }
 
-void DiffViewDialog::syncScroll(int value) {
-    // Block signals to prevent infinite loop of A updates B updates A...
-    m_leftEdit->verticalScrollBar()->blockSignals(true);
-    m_rightEdit->verticalScrollBar()->blockSignals(true);
-
-    m_leftEdit->verticalScrollBar()->setValue(value);
-    m_rightEdit->verticalScrollBar()->setValue(value);
-
-    m_leftEdit->verticalScrollBar()->blockSignals(false);
-    m_rightEdit->verticalScrollBar()->blockSignals(false);
-}
 
 void DiffViewDialog::computeDiff() {
     // Prepare Data by splitting into lines
@@ -139,15 +135,6 @@ void DiffViewDialog::computeDiff() {
     // Explanation: We use QTextCursor to navigate and format text blocks (lines).
     QTextCursor cursorLeft = m_leftEdit->textCursor();
     QTextCursor cursorRight = m_rightEdit->textCursor();
-
-    // Lambda helper to insert a line with a specific background color
-    auto insertStyledLine = [](QTextCursor &cursor, const QString &text, const QColor &bg) {
-        QTextBlockFormat fmt = cursor.blockFormat();
-        fmt.setBackground(bg);
-        cursor.setBlockFormat(fmt);
-        // We insert text containing a newline to create the block
-        cursor.insertText(text + "\n");
-    };
 
     // Render the Diff
     for (const auto &hunk : hunks) {
@@ -187,3 +174,22 @@ void DiffViewDialog::computeDiff() {
     m_leftEdit->verticalScrollBar()->setValue(0);
     m_rightEdit->verticalScrollBar()->setValue(0);
 }
+
+
+void DiffViewDialog::insertStyledLine(QTextCursor &cursor, const QString &text, const QColor &bg) {
+    QTextBlockFormat fmt = cursor.blockFormat();
+    fmt.setBackground(bg);
+    cursor.setBlockFormat(fmt);
+
+    // Force a visible character if text is empty.
+    // This prevents the "Spacer" lines from collapsing to 0 height,
+    // ensuring the Left and Right sides stay perfectly aligned vertically.
+    QString lineText = text;
+    if (lineText.isEmpty()) {
+        lineText = QString(QChar(0xA0)); // Non-breaking space
+    }
+
+    // Insert text. The newline creates the block.
+    cursor.insertText(lineText + "\n");
+}
+

@@ -5,6 +5,7 @@ namespace DiffHelpers {
 
 // Helper to trim lines so whitespace differences don't cause false mismatches
 static QString normalize(const QString& s) {
+    // Trim whitespace to ignore indentation changes or \r artifacts
     return s.trimmed();
 }
 
