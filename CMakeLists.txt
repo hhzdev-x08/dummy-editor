@@ -56,6 +56,11 @@ add_executable(${PROJECT_NAME}
     # Core
     src/core/Highlighter.h
     src/core/Highlighter.cpp
+
+    # Utils
+    src/utils/DiffHelpers.h
+    src/utils/DiffHelpers.cpp
+
     
 )
 

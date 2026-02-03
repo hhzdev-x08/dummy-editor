@@ -4,7 +4,13 @@
 EditorArea::EditorArea(QWidget *parent) : QWidget(parent) {
     // Use a vertical layout to arrange widgets.
     QVBoxLayout *layout = new QVBoxLayout(this);
+    // Adds 500 pixels of "empty" scrollable space at the bottom.
     layout->setContentsMargins(0,0,0,0); // Remove padding for a tight fit.
+
+    // Optional: If want it to be exactly one screen height of empty space:
+    // this->installEventFilter(this); // Then update margins on resizeEvent
+    
+    layout->setSpacing(0);
 
     // A stacked widget allows switching between multiple views, like a card deck.
     m_stack = new QStackedWidget(this);
@@ -89,8 +95,10 @@ void EditorArea::openFile(const QString &filePath) {
     } else {
         // Option B: Code
         CodeEditor *code = new CodeEditor(this);
-        code->setPlainText(content);
+        // Setup the editor (Font, Theme, Highlighter) BEFORE setting the text.
+        // This ensures the document layout calculates the correct line heights immediately.
         setupEditor(code, filePath); // Apply Dracula theme
+        code->setPlainText(content);
         doc = code->document();
         editorWidget = code;
     }

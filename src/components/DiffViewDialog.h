@@ -10,6 +10,8 @@
 #include <QSplitter>
 #include <QTextBlock>
 
+#include "utils/DiffHelpers.h"
+
 class DiffViewDialog : public QDialog {
     Q_OBJECT
 

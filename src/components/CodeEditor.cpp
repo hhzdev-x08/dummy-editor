@@ -1,7 +1,10 @@
 #include "CodeEditor.h"
 
+// =========================================================
+// CodeEditor Implementation
+// =========================================================
 
-CodeEditor::CodeEditor(QWidget *parent) : QTextEdit(parent) {
+CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent) {
     // Enable Mouse Tracking so we get mouseMoveEvent even without clicking
     setMouseTracking(true);
 
@@ -16,6 +19,39 @@ CodeEditor::CodeEditor(QWidget *parent) : QTextEdit(parent) {
     m_hoverTimer->setSingleShot(true);
     connect(m_hoverTimer, &QTimer::timeout, this, &CodeEditor::onHoverTimerTimeout);
 
+
+    // Setup Line Numbers
+    lineNumberArea = new LineNumberArea(this);
+    
+    connect(this, &QPlainTextEdit::blockCountChanged,
+            this, &CodeEditor::updateLineNumberAreaWidth);
+            
+    connect(this, &QPlainTextEdit::updateRequest,
+            this, &CodeEditor::updateLineNumberArea);
+            
+    connect(this, &QPlainTextEdit::cursorPositionChanged,
+            [this](){ lineNumberArea->update(); }); // Highlight current line number
+
+    // // Connect updateRequest to handle scrolling smoothly
+    // connect(this, &QPlainTextEdit::updateRequest, this, &CodeEditor::updateLineNumberArea);
+
+    updateLineNumberAreaWidth(0);
+
+    // Default styling for line numbers (fallback)
+    m_lineNumberColor = Qt::gray;
+    m_lineNumberBgColor = QColor("#282a36"); // Dracula bg
+    
+    // Allow scrolling the current line to the center
+    // This gives you the "Scroll Beyond Last Line" feel natively.
+    setCenterOnScroll(true); 
+
+    // // [OPTIONAL] Strictly scroll until the last line is at the TOP:
+    // connect(this->verticalScrollBar(), &QScrollBar::rangeChanged, this, [this](int min, int max){
+    //     // Extend the scrollbar range by the height of the viewport
+    //     if (max > 0) {
+    //         this->verticalScrollBar()->setMaximum(max + viewport()->height() - fontMetrics().height());
+    //     }
+    // });
 }
 
 void CodeEditor::setTheme(const QHash<QString, QColor> &theme) {
@@ -28,6 +64,13 @@ void CodeEditor::setTheme(const QHash<QString, QColor> &theme) {
     if (m_customTooltip) {
         m_customTooltip->applyTheme(theme);
     }
+
+    // Store colors for Line Numbers
+    m_lineNumberBgColor = theme.value("background");
+    m_lineNumberColor = theme.value("comment"); // Use comment color for line numbers
+
+    // Force repaint of line numbers with new colors
+    if (lineNumberArea) lineNumberArea->update();
 }
 
 void CodeEditor::wheelEvent(QWheelEvent *e) {
@@ -43,9 +86,38 @@ void CodeEditor::wheelEvent(QWheelEvent *e) {
         e->accept();
     } else {
         // Default scroll behavior
-        QTextEdit::wheelEvent(e);
+        QPlainTextEdit::wheelEvent(e);
     }
 }
+
+void CodeEditor::resizeEvent(QResizeEvent *e) {
+    QPlainTextEdit::resizeEvent(e);
+
+    QRect cr = contentsRect();
+    
+    // Calculate desired margins
+    int leftMargin = lineNumberAreaWidth();
+    // int bottomMargin = cr.height() / 2; // "Scroll Beyond Last Line" (half screen)
+    // if (bottomMargin < 50) bottomMargin = 50;
+
+    // // Check if margins actually changed to prevent Infinite Loop
+    // QMargins current = viewportMargins();
+    // if (current.left() != leftMargin || current.bottom() != bottomMargin) {
+    //     setViewportMargins(leftMargin, 0, 0, bottomMargin);
+    // }
+
+    // Only set the LEFT margin for line numbers.
+    setViewportMargins(leftMargin, 0, 0, 0);
+
+    // Position the line number widget
+    // It stays on the left edge, full height of the CONTENT rect (ignoring bottom margin)
+    lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), leftMargin, cr.height()));
+}
+
+
+// ---------------------------------
+// Hover Logic
+// ---------------------------------
 
 void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
     // Restart hover timer only while Ctrl is held to detect a stable hover
@@ -55,7 +127,7 @@ void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
         m_hoverTimer->stop();
     }
 
-    QTextEdit::mouseMoveEvent(e);
+    QPlainTextEdit::mouseMoveEvent(e);
 }
 
 void CodeEditor::keyPressEvent(QKeyEvent *e) {
@@ -64,7 +136,7 @@ void CodeEditor::keyPressEvent(QKeyEvent *e) {
         qDebug() << "CTRL Pressed - Starting Hover Timer";
         m_hoverTimer->start();
     }
-    QTextEdit::keyPressEvent(e);
+    QPlainTextEdit::keyPressEvent(e);
 }
 
 void CodeEditor::keyReleaseEvent(QKeyEvent *e) {
@@ -72,14 +144,14 @@ void CodeEditor::keyReleaseEvent(QKeyEvent *e) {
     if (e->key() == Qt::Key_Control) {
         m_hoverTimer->stop();
     }
-    QTextEdit::keyReleaseEvent(e);
+    QPlainTextEdit::keyReleaseEvent(e);
 }
 
 void CodeEditor::leaveEvent(QEvent *e) {
     // Stop hover timer when mouse leaves
     qDebug() << "Mouse Left - Stopping Hover Timer";
     m_hoverTimer->stop();
-    QTextEdit::leaveEvent(e);
+    QPlainTextEdit::leaveEvent(e);
 }
 
 void CodeEditor::onHoverTimerTimeout() {
@@ -91,6 +163,74 @@ void CodeEditor::onHoverTimerTimeout() {
     }
 }
 
+// ---------------------------------
+// Line Number Area Logic
+// ---------------------------------
+
+int CodeEditor::lineNumberAreaWidth() {
+    int digits = 1;
+    int max = qMax(1, document()->blockCount());
+    while (max >= 10) {
+        max /= 10;
+        ++digits;
+    }
+    // Width of character '9' in current font + padding
+    int space = 15 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
+    return space;
+}
+
+
+void CodeEditor::updateLineNumberAreaWidth(int /*newBlockCount*/) {
+    // We just trigger a margin update, the resizeEvent handles the rest
+    setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+}
+
+void CodeEditor::updateLineNumberArea(const QRect &rect, int dy) {
+    if (dy)
+        lineNumberArea->scroll(0, dy);
+    else
+        lineNumberArea->update(0, rect.y(), lineNumberArea->width(), rect.height());
+
+    if (rect.contains(viewport()->rect()))
+        updateLineNumberAreaWidth(0);
+}
+
+void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event) {
+    QPainter painter(lineNumberArea);
+    
+    // Fill background
+    painter.fillRect(event->rect(), m_lineNumberBgColor);
+
+    // Iterate over visible blocks
+    QTextBlock block = firstVisibleBlock();
+    int blockNumber = block.blockNumber();
+    int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
+    int bottom = top + (int) blockBoundingRect(block).height();
+
+    // Loop until past the paint event area
+    while (block.isValid() && top <= event->rect().bottom()) {
+        if (block.isVisible() && bottom >= event->rect().top()) {
+            QString number = QString::number(blockNumber + 1);
+            
+            // Highlight current line number
+            bool isCurrentLine = (textCursor().blockNumber() == blockNumber);
+            painter.setPen(isCurrentLine ? Qt::white : m_lineNumberColor);
+            
+            // Bold font for current line
+            QFont f = font();
+            if (isCurrentLine) f.setBold(true);
+            painter.setFont(f);
+
+            painter.drawText(0, top, lineNumberArea->width() - 5, fontMetrics().height(),
+                             Qt::AlignRight, number);
+        }
+
+        block = block.next();
+        top = bottom;
+        bottom = top + (int) blockBoundingRect(block).height();
+        ++blockNumber;
+    }
+}
 
 // ---------------------------------
 // Paste with Diff Logic
@@ -151,4 +291,20 @@ void CodeEditor::onPasteWithDiff() {
 
         cursor.endEditBlock();
     }
+}
+
+
+
+// =========================================================
+// LineNumberArea Implementation
+// =========================================================
+
+LineNumberArea::LineNumberArea(CodeEditor *editor) : QWidget(editor), codeEditor(editor) {}
+
+QSize LineNumberArea::sizeHint() const {
+    return QSize(codeEditor->lineNumberAreaWidth(), 0);
+}
+
+void LineNumberArea::paintEvent(QPaintEvent *event) {
+    codeEditor->lineNumberAreaPaintEvent(event);
 }

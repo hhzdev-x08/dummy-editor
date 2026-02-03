@@ -13,6 +13,8 @@
 #include <QMenu>
 #include <QMouseEvent>
 
+
+
 // A special QTextEdit that knows how to handle Image Pasting
 class CustomRichTextBoard : public QTextEdit {
     Q_OBJECT
