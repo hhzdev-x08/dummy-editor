@@ -5,7 +5,11 @@
 #include <QAction>
 #include <QTextDocument>
 #include <QComboBox>
-#include "PasteAwareEditor.h"
+#include <QTextImageFormat>
+#include "CustomRichTextBoard.h"
+
+class ImageResizeWidget;
+class ImageCropDialog;
 
 class RichTextEditor : public QWidget {
     Q_OBJECT
@@ -28,11 +32,22 @@ private slots:
     void insertImage();
     void onCursorPositionChanged(); // Sync buttons with cursor state
     void onPageSizeChanged(int index);
+    
+    // Image manipulation slots
+    void onImageResizeRequested(QSize newSize);
+    void onEditorClicked(QPoint pos);
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     void setupToolbar();
+    void showImageResizeWidget(const QTextImageFormat &imageFormat, const QRect &imageRect);
+    void hideImageResizeWidget();
+    QRect getImageRect(const QTextCursor &cursor);
+    QTextCursor findImageCursor(const QPoint &pos);
 
-    PasteAwareEditor *m_editor;
+    CustomRichTextBoard *m_editor;
     QToolBar *m_toolbar;
     
     QAction *m_actBold;
@@ -40,4 +55,9 @@ private:
     QAction *m_actUnderline;
     QAction *m_actImage;
     QComboBox *m_sizeCombo;
+    
+    // Image manipulation
+    ImageResizeWidget *m_resizeWidget;
+    QTextCursor m_currentImageCursor;
+    QString m_currentImageName;
 };

@@ -14,10 +14,10 @@
 #include <QMouseEvent>
 
 // A special QTextEdit that knows how to handle Image Pasting
-class PasteAwareEditor : public QTextEdit {
+class CustomRichTextBoard : public QTextEdit {
     Q_OBJECT
 public:
-    explicit PasteAwareEditor(QWidget *parent = nullptr);
+    explicit CustomRichTextBoard(QWidget *parent = nullptr);
 
 protected:
     // This function is called whenever the user presses Ctrl+V
@@ -27,7 +27,7 @@ protected:
     void mousePressEvent(QMouseEvent *e) override;
 
 private slots:
-    void resizeImageAtCursor();
+    // void resizeImageAtCursor();
 
 private:
     // Helper to generate HTML with width limit

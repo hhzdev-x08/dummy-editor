@@ -1,23 +1,30 @@
-#include "PasteAwareEditor.h"
+#include "CustomRichTextBoard.h"
 
-PasteAwareEditor::PasteAwareEditor(QWidget *parent) : QTextEdit(parent) {
+CustomRichTextBoard::CustomRichTextBoard(QWidget *parent) : QTextEdit(parent) {
 }
 
 // Determines if the editor can accept the data being pasted from the clipboard.
-bool PasteAwareEditor::canInsertFromMimeData(const QMimeData *source) const {
+bool CustomRichTextBoard::canInsertFromMimeData(const QMimeData *source) const {
     // We can handle images, and for everything else, we defer to the base class implementation.
     return source->hasImage() || QTextEdit::canInsertFromMimeData(source);
 }
 
 // Takes a QImage, scales it, converts it to Base64, and wraps it in an HTML `<img>` tag.
-QString PasteAwareEditor::processImage(const QImage &image) {
+QString CustomRichTextBoard::processImage(const QImage &image) {
     if (image.isNull()) return "";
 
-    // Define a fixed width for all pasted images to ensure consistency.
-    const int fixedWidth = 500;
+    // // Define a fixed width for all pasted images to ensure consistency.
+    // const int fixedWidth = 500;
+
+    // Calculate 80% of the current page width.
+    int targetWidth = this->width() * 0.8;
+
+    // Safety fallback if width isn't initialized, though RichTextEditor 
+    // sets it to 800 in the constructor.
+    if (targetWidth <= 0) targetWidth = 500;
 
     // Scale the image to the fixed width while preserving its aspect ratio.
-    QImage finalImg = image.scaledToWidth(fixedWidth, Qt::SmoothTransformation);
+    QImage finalImg = image.scaledToWidth(targetWidth, Qt::SmoothTransformation);
 
     // Convert the image data into a Base64 string for embedding in HTML.
     QByteArray byteArray;
@@ -27,13 +34,14 @@ QString PasteAwareEditor::processImage(const QImage &image) {
     QString base64 = byteArray.toBase64();
 
     // Return the complete HTML tag with the embedded image data.
-    return QString("<img src=\"data:image/png;base64,%1\" width=\"%2\" />")
+    return QString("<img src=\"data:image/png;base64,%1\" width=\"%2\" height=\"%3\" />")
            .arg(base64)
-           .arg(fixedWidth);
+           .arg(finalImg.width())
+           .arg(finalImg.height());
 }
 
 // Overrides the default mouse press behavior to detect clicks on images.
-void PasteAwareEditor::mousePressEvent(QMouseEvent *e) {
+void CustomRichTextBoard::mousePressEvent(QMouseEvent *e) {
     // We only care about the left mouse button.
     if (e->button() == Qt::LeftButton) {
         // Get the cursor at the position where the mouse was clicked.
@@ -45,7 +53,7 @@ void PasteAwareEditor::mousePressEvent(QMouseEvent *e) {
         // If the selected content is an image, we trigger the resize dialog.
         if (cursor.charFormat().isImageFormat()) {
             setTextCursor(cursor); // Set this as the editor's active cursor.
-            resizeImageAtCursor();
+            // resizeImageAtCursor();
             return; // Consume the event to prevent default text cursor movement.
         }
     }
@@ -54,7 +62,7 @@ void PasteAwareEditor::mousePressEvent(QMouseEvent *e) {
 }
 
 // Handles the actual insertion of data from the clipboard.
-void PasteAwareEditor::insertFromMimeData(const QMimeData *source) {
+void CustomRichTextBoard::insertFromMimeData(const QMimeData *source) {
     if (source->hasImage()) {
         // Extract the image from the clipboard data.
         QImage image = qvariant_cast<QImage>(source->imageData());
@@ -70,8 +78,9 @@ void PasteAwareEditor::insertFromMimeData(const QMimeData *source) {
     }
 }
 
+/*
 // This slot is triggered to resize the image currently under the text cursor.
-void PasteAwareEditor::resizeImageAtCursor() {
+void CustomRichTextBoard::resizeImageAtCursor() {
     QTextCursor cursor = textCursor();
     QTextImageFormat imageFmt = cursor.charFormat().toImageFormat();
 
@@ -105,3 +114,4 @@ void PasteAwareEditor::resizeImageAtCursor() {
         cursor.setCharFormat(imageFmt);
     }
 }
+*/

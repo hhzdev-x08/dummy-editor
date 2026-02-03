@@ -38,8 +38,14 @@ add_executable(${PROJECT_NAME}
     src/components/RichTextEditor.h
     src/components/RichTextEditor.cpp
 
-    src/components/PasteAwareEditor.h
-    src/components/PasteAwareEditor.cpp
+    src/components/CustomRichTextBoard.h
+    src/components/CustomRichTextBoard.cpp
+
+    src/components/ImageResizeWidget.h
+    src/components/ImageResizeWidget.cpp
+    
+    src/components/ImageCropDialog.h
+    src/components/ImageCropDialog.cpp
 
     # Core
     src/core/Highlighter.h
